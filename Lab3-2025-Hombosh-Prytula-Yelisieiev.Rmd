@@ -30,6 +30,144 @@ contain the parameter with probability equal to the confidence level.
 The expected value of the exponential distribution E (λ) is 1/λ, so that a good point estimate of
 the parameter θ := 1/λ is the sample mean x. Confidence interval for θ can be formed in several different ways:
 
+### Task 1
+
+Let $X_1, \dots, X_n$ be i.i.d. random variables from $Exp(\lambda)$. We know that $2\lambda X_i \sim \chi^2_2$ (Chi-square with 2 degrees of freedom).
+The sum of independent Chi-square variables is also Chi-square:
+
+```{r}
+theta <- team_id / 10
+lambda <- 1 / theta
+alpha_values <- c(0.1, 0.05, 0.01)
+n_values <- c(10, 50, 100)
+M <- 1000
+results_df <- data.frame()
+```
+
+```{r}
+res_m1 <- data.frame()
+
+# ЦИКЛ 1
+for (n in n_values) {
+  for (alpha in alpha_values) {
+    # Генерація
+    samples <- matrix(rexp(n * M, rate = lambda), nrow = n)
+    x_bar <- colMeans(samples)
+    
+    # Квантилі Chi-Square
+    chi_low <- qchisq(alpha/2, df = 2*n)
+    chi_high <- qchisq(1 - alpha/2, df = 2*n)
+    
+    # Формула
+    lower <- (2 * n * x_bar) / chi_high
+    upper <- (2 * n * x_bar) / chi_low
+    
+    # Результат
+    cover <- mean((theta >= lower) & (theta <= upper))
+    len <- mean(upper - lower)
+    
+    res_m1 <- rbind(res_m1, data.frame(Method="Exact", N=n, Alpha=alpha, Cov=cover, Len=len))
+  }
+}
+res_m1
+```
+Conclusion: This method demonstrates excellent performance. For all sample sizes ($N=10, 50, 100$), the coverage probability (Cov) is very close to the nominal levels. For instance, at $N=10$ and $\alpha=0.05$, the coverage is 0.949, which is almost exactly the target 0.95.
+
+
+
+### Task 2
+
+```{r}
+res_m2 <- data.frame()
+
+for (n in n_values) {
+  for (alpha in alpha_values) {
+    samples <- matrix(rexp(n * M, rate = lambda), nrow = n)
+    x_bar <- colMeans(samples)
+    z <- qnorm(1 - alpha/2)
+
+    margin <- z * (theta / sqrt(n))
+    lower <- x_bar - margin
+    upper <- x_bar + margin
+    
+    cover <- mean((theta >= lower) & (theta <= upper))
+    len <- mean(upper - lower)
+    
+    res_m2 <- rbind(res_m2, data.frame(Method="Norm_Known", N=n, Alpha=alpha, Cov=cover, Len=len))
+  }
+}
+res_m2
+```
+
+Conclusion: As expected, using the true parameter $\theta$ for the standard error yields stable coverage results close to theoretical values (e.g., 0.956 for $N=10, \alpha=0.05$).
+
+### Task 3
+
+We start with the inequality $|\theta - \overline{X}| \le z \frac{\theta}{\sqrt{n}}$. 
+
+Squaring both sides eliminates the absolute value:$$(\overline{X} - \theta)^2 \le \frac{z^2}{n} \theta^2$$
+
+This expands to a quadratic inequality regarding $\theta$:$$\overline{X}^2 - 2\overline{X}\theta + \theta^2 \le k \theta^2, \quad \text{where } k = \frac{z^2}{n}$$$$(1-k)\theta^2 - 2\overline{X}\theta + \overline{X}^2 \le 0$$
+
+Solving the corresponding quadratic equation $a\theta^2 + b\theta + c = 0$ gives the interval endpoints used in the code.
+
+```{r}
+res_m3 <- data.frame()
+
+for (n in n_values) {
+  for (alpha in alpha_values) {
+    samples <- matrix(rexp(n * M, rate = lambda), nrow = n)
+    x_bar <- colMeans(samples)
+    z <- qnorm(1 - alpha/2)
+    
+    factor <- z / sqrt(n)
+    lower <- x_bar / (1 + factor)
+    upper <- x_bar / (1 - factor)
+    
+    cover <- mean((theta >= lower) & (theta <= upper))
+    len <- mean(upper - lower)
+    
+    res_m3 <- rbind(res_m3, data.frame(Method="Norm_Solved", N=n, Alpha=alpha, Cov=cover, Len=len))
+  }
+}
+res_m3
+```
+
+Conclusion: This method maintains good coverage, often slightly exceeding the target level at small sample sizes (e.g., 0.963 for $N=10, \alpha=0.05$).
+
+### Task 4
+
+```{r}
+res_m4 <- data.frame()
+
+for (n in n_values) {
+  for (alpha in alpha_values) {
+    samples <- matrix(rexp(n * M, rate = lambda), nrow = n)
+    x_bar <- colMeans(samples)
+    s <- apply(samples, 2, sd)
+    
+    t_val <- qt(1 - alpha/2, df = n-1)
+    margin <- t_val * (s / sqrt(n))
+    lower <- x_bar - margin
+    upper <- x_bar + margin
+    
+    cover <- mean((theta >= lower) & (theta <= upper))
+    len <- mean(upper - lower)
+    
+    res_m4 <- rbind(res_m4, data.frame(Method="Student_t", N=n, Alpha=alpha, Cov=cover, Len=len))
+  }
+}
+res_m4
+```
+
+Conclusion: This method shows noticeable under-coverage at small sample sizes ($N=10$). For $\alpha=0.10$, the coverage is only 0.857 (target 0.90), and for $\alpha=0.05$, it is 0.901 (target 0.95). This discrepancy occurs because the exponential distribution is highly skewed, violating the symmetry assumption of the t-statistic. However, as $N$ increases to 100, the coverage improves significantly (0.932 for $\alpha=0.05$) due to the Central Limit Theorem.
+
+### General conclusion for Problem 1
+
+In this problem, we compared four different methods for constructing confidence intervals (CI) for the parameter $\theta$ of an exponential distribution. By performing Monte Carlo simulations with $M=1000$ repetitions, we analyzed the coverage probability (how often the interval captures the true parameter) and the interval length (precision) across different sample sizes ($N=10, 50, 100$) and confidence levels ($1-\alpha$).
+
+For small samples from an Exponential distribution, Method 1 should be strictly used. Method 4 is acceptable only for large sample sizes ($N \ge 50$) where the distribution of the sample mean approximates normality.
+
 ## Problem 2
 
 
