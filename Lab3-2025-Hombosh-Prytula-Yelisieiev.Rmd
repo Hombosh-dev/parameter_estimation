@@ -1,0 +1,46 @@
+---
+title: 'P&S-2025: Lab assignment 3'
+author: "Yelisieiev Hordii, Prytula Daryna, Hombosh Oleh"
+output:
+  html_document:
+    df_print: paged
+editor_options: 
+  markdown: 
+    wrap: 72
+---
+
+# Setup
+
+```{r}
+# Set seed with team_id for reproducibility
+team_id <- 27
+set.seed(team_id)
+
+# Load necessary libraries
+library(ggplot2)
+```
+
+# Part I: Parameter Estimation
+
+Aim: In problems 1 and 2, you will have to verify that the interval estimates produced by the known rules indeed
+contain the parameter with probability equal to the confidence level.
+
+## Problem 1
+
+The expected value of the exponential distribution E (λ) is 1/λ, so that a good point estimate of
+the parameter θ := 1/λ is the sample mean x. Confidence interval for θ can be formed in several different ways:
+
+## Problem 2
+
+
+
+# Part II: Unbiasedness of Estimators
+
+## Problem 3
+
+
+
+# Conclusion
+
+
+
